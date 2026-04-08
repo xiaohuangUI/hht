@@ -717,6 +717,546 @@ def chart_insight(title: str, points: List[str]) -> None:
     )
 
 
+def inject_style() -> None:
+    st.markdown(
+        """
+<style>
+:root {
+  --bg:#eef0ee;
+  --panel:#ffffffba;
+  --panel-solid:#ffffff;
+  --panel-soft:#f6f8f6;
+  --ink-900:#1d2a27;
+  --ink-700:#41514d;
+  --ink-500:#6f7f7a;
+  --line:#d7ddd9;
+  --line-strong:#c6cfcb;
+  --brand:#3f8f80;
+  --brand-2:#66b4a5;
+  --brand-3:#a8d2c8;
+  --shadow-lg: 0 30px 62px -36px rgba(24, 39, 35, .30);
+  --shadow-md: 0 18px 34px -26px rgba(24, 39, 35, .24);
+  --radius-xl: 30px;
+  --radius-lg: 22px;
+  --radius-md: 15px;
+}
+
+[data-testid="stAppViewContainer"]{
+  background:
+    radial-gradient(860px 460px at -8% -16%, rgba(102,180,165,.24), transparent 46%),
+    radial-gradient(760px 420px at 108% -24%, rgba(63,143,128,.18), transparent 42%),
+    radial-gradient(860px 520px at 52% 112%, rgba(168,210,200,.34), transparent 46%),
+    linear-gradient(180deg,#f7f8f7 0%, var(--bg) 100%);
+}
+
+[data-testid="stHeader"]{
+  background: rgba(247,248,247,.74);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,.64);
+}
+
+[data-testid="stSidebar"]{
+  background:
+    radial-gradient(680px 340px at -20% -20%, rgba(102,180,165,.24), transparent 52%),
+    linear-gradient(180deg, rgba(255,255,255,.88) 0%, rgba(247,248,246,.82) 100%);
+  border-right: 1px solid rgba(255,255,255,.8);
+  backdrop-filter: blur(10px);
+}
+
+[data-testid="stSidebar"] *{
+  color: var(--ink-900);
+}
+
+.main .block-container{
+  max-width: 1500px;
+  padding-top: 1.65rem;
+  padding-bottom: 2.8rem;
+}
+
+html, body, [class*="css"], [data-testid="stAppViewContainer"] {
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Heiti SC", sans-serif;
+  line-height: 1.5;
+}
+
+[data-testid="stVerticalBlock"] > [data-testid="element-container"]{
+  margin-bottom: .62rem;
+}
+
+div[data-testid="stPlotlyChart"]{
+  border: 1px solid rgba(255,255,255,.76);
+  border-radius: var(--radius-lg);
+  padding: .5rem .56rem .2rem .56rem;
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-md);
+}
+
+div[data-testid="stDataFrame"]{
+  border:1px solid rgba(255,255,255,.76);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--panel-solid) 92%, transparent);
+  box-shadow: 0 14px 30px -26px rgba(30,44,40,.32);
+}
+
+[data-testid="stExpander"]{
+  border: 1px solid rgba(255,255,255,.78);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 24px -26px rgba(29,44,39,.4);
+}
+
+[data-testid="stExpander"] details summary{
+  font-weight: 640 !important;
+  color: var(--ink-900) !important;
+}
+
+[data-testid="stProgressBar"] > div > div{
+  background: linear-gradient(90deg, var(--brand), var(--brand-2)) !important;
+}
+
+[data-testid="stTextInput"] input,
+[data-testid="stTextArea"] textarea,
+[data-testid="stNumberInput"] input{
+  border-radius: 12px !important;
+  border: 1px solid var(--line) !important;
+  background: rgba(255,255,255,.82) !important;
+  color: var(--ink-900) !important;
+}
+
+[data-testid="stSelectbox"] [data-baseweb="select"] > div{
+  border-radius: 12px !important;
+  border: 1px solid var(--line) !important;
+  background: rgba(255,255,255,.82) !important;
+}
+
+[data-testid="stFileUploaderDropzone"]{
+  border-radius: 14px !important;
+  border: 1px dashed var(--line-strong) !important;
+  background: rgba(255,255,255,.65) !important;
+  padding: 1rem !important;
+}
+
+[data-testid="stSlider"] [data-baseweb="slider"] > div > div{
+  background: linear-gradient(90deg, var(--brand), var(--brand-2)) !important;
+}
+
+[data-testid="stSliderThumbValue"]{
+  color: var(--ink-700) !important;
+  font-weight: 600 !important;
+}
+
+.hero{
+  border-radius: var(--radius-xl);
+  padding: 26px 28px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255,255,255,.82);
+  background:
+    radial-gradient(940px 420px at -22% -44%, rgba(102,180,165,.26), transparent 48%),
+    radial-gradient(920px 320px at 118% -44%, rgba(168,210,200,.34), transparent 50%),
+    linear-gradient(180deg, rgba(255,255,255,.88) 0%, rgba(249,250,248,.8) 100%);
+  color: var(--ink-900);
+  box-shadow: var(--shadow-lg);
+  display: grid;
+  grid-template-columns: 1.2fr .95fr;
+  gap: 14px;
+  backdrop-filter: blur(10px);
+}
+
+.hero-kicker{
+  font-size: .78rem;
+  letter-spacing: .1em;
+  color: color-mix(in srgb, var(--brand) 76%, #244a43);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.hero-kicker::before{
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  box-shadow: 0 0 0 4px rgba(102,180,165,.18);
+}
+
+.hero h1{
+  margin: 0;
+  font-size: 2.1rem;
+  line-height: 1.12;
+  letter-spacing: .02em;
+  font-weight: 820;
+  color: #1b2a27;
+}
+
+.hero p{
+  margin: 10px 0 2px 0;
+  color: var(--ink-700);
+  font-size: .96rem;
+  max-width: 95%;
+}
+
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin-top:10px;
+  margin-right:8px;
+  padding:6px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.84);
+  color: #2f4a44;
+  background: rgba(255,255,255,.74);
+  font-size:.78rem;
+  box-shadow: 0 8px 14px -14px rgba(27,44,39,.46);
+}
+
+.chip::before{
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+}
+
+.hero-side{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-content: start;
+}
+
+.hero-stat{
+  border: 1px solid rgba(255,255,255,.78);
+  border-radius: 14px;
+  background: rgba(255,255,255,.72);
+  padding: 11px 12px;
+  box-shadow: 0 12px 18px -18px rgba(34,52,47,.7);
+}
+
+.hero-stat .k{
+  color: var(--ink-500);
+  font-size: .75rem;
+}
+
+.hero-stat .v{
+  color: var(--ink-900);
+  font-size: 1.18rem;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.section-title{
+  font-weight: 780;
+  color: #1e2d2a;
+  font-size: 1.13rem;
+  margin: 8px 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.section-title::before{
+  content: "";
+  width: 6px;
+  height: 20px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--brand), var(--brand-2));
+  box-shadow: 0 0 0 4px rgba(102,180,165,.14);
+}
+
+.section-sub{
+  color: var(--ink-500);
+  font-size: .86rem;
+  margin-top: -2px;
+  margin-bottom: 6px;
+}
+
+.note{
+  color: var(--ink-500);
+  font-size:.9rem;
+  line-height: 1.55;
+}
+
+div[data-testid="stMetric"]{
+  border: 1px solid rgba(255,255,255,.75);
+  border-radius: var(--radius-md);
+  padding: 12px 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,.72) 0%, rgba(249,250,248,.66) 100%);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 20px 38px -32px rgba(28,42,38,.58);
+}
+
+div[data-testid="stMetric"] label{
+  color: var(--ink-500) !important;
+  font-size: .92rem !important;
+  font-weight: 620 !important;
+  line-height: 1.35 !important;
+}
+
+div[data-testid="stMetricValue"]{
+  color: #1d2b27 !important;
+}
+
+div[data-testid="stMetricValue"] > div{
+  font-size: clamp(2.0rem, 2.4vw, 2.55rem) !important;
+  font-weight: 780 !important;
+  line-height: 1.08 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+[data-testid="stSidebar"] button[kind="secondary"],
+[data-testid="stSidebar"] button[kind="primary"]{
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.56);
+  background: rgba(255,255,255,.55);
+  color: var(--ink-900);
+  font-weight: 620;
+}
+
+[data-testid="stSidebar"] .stSlider [data-baseweb="slider"] > div > div{
+  background: linear-gradient(90deg, var(--brand), var(--brand-2)) !important;
+}
+
+.control-bar{
+  border:1px solid rgba(255,255,255,.78);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(255,255,255,.84) 0%, rgba(246,248,246,.78) 100%);
+  backdrop-filter: blur(10px);
+  padding: 13px 13px 10px 13px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 14px;
+}
+
+.user-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border:1px solid rgba(255,255,255,.82);
+  background:rgba(255,255,255,.74);
+  color: var(--ink-700);
+  font-size: .82rem;
+  box-shadow: 0 10px 14px -16px rgba(27,42,37,.56);
+}
+
+.user-badge::before{
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--brand);
+  box-shadow: 0 0 0 4px rgba(102,180,165,.18);
+}
+
+button[data-baseweb="tab"]{
+  font-weight: 640 !important;
+  color:var(--ink-500) !important;
+  border-radius: 999px !important;
+  padding: 0 14px !important;
+  height: 44px !important;
+  white-space: nowrap !important;
+}
+
+div[data-baseweb="tab-list"]{
+  gap: 6px;
+  background: rgba(255,255,255,.58);
+  border: 1px solid rgba(255,255,255,.8);
+  border-radius: 999px;
+  padding: 3px;
+  margin-bottom: 13px;
+  box-shadow: 0 16px 24px -28px rgba(36,52,47,.8);
+}
+
+button[data-baseweb="tab"][aria-selected="true"]{
+  color: var(--ink-900) !important;
+  background: linear-gradient(90deg, rgba(255,255,255,.95), rgba(248,251,249,.9)) !important;
+  border-bottom: none !important;
+  box-shadow: 0 8px 18px -14px rgba(39, 56, 51, .72);
+}
+
+.stButton > button{
+  min-height: 44px;
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: .01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  border-radius: 12px !important;
+  border: 1px solid rgba(255,255,255,.78) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,.86) 0%, rgba(246,248,246,.8) 100%) !important;
+  color: var(--ink-900) !important;
+  box-shadow: 0 18px 24px -28px rgba(30,45,40,.9);
+}
+
+.stButton > button:hover{
+  border-color: rgba(102,180,165,.52) !important;
+  box-shadow: 0 22px 30px -28px rgba(36,63,56,.9);
+}
+
+.ref-card{
+  border:1px solid rgba(255,255,255,.8);
+  background:var(--panel);
+  border-radius: var(--radius-md);
+  padding: 11px 12px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-md);
+}
+
+.insight-card{
+  border:1px solid rgba(255,255,255,.8);
+  background: linear-gradient(180deg, rgba(255,255,255,.74) 0%, rgba(246,250,248,.7) 100%);
+  border-radius: 14px;
+  padding: 11px 13px 9px 13px;
+  margin: 7px 0 12px 0;
+  box-shadow: 0 18px 22px -24px rgba(34,51,45,.75);
+}
+
+.insight-title{
+  color:#1f332f;
+  font-size:.88rem;
+  font-weight:740;
+  margin-bottom: 5px;
+}
+
+.insight-card ul{
+  margin: 0;
+  padding-left: 1.02rem;
+  color:#4b5c57;
+  font-size:.82rem;
+  line-height:1.52;
+}
+
+#MainMenu, footer {
+  visibility: hidden;
+}
+
+@media (max-width: 980px){
+  .hero{
+    grid-template-columns: 1fr;
+  }
+  .hero h1{
+    font-size: 1.55rem;
+  }
+  .hero-side{
+    grid-template-columns: 1fr 1fr;
+  }
+  button[data-baseweb="tab"]{
+    padding: 0 10px !important;
+    font-size: .88rem !important;
+    height: 40px !important;
+  }
+}
+
+@media (max-width: 640px){
+  .main .block-container{
+    padding-top: 1.2rem;
+    padding-left: .7rem;
+    padding-right: .7rem;
+  }
+  .hero{
+    padding: 16px;
+  }
+  .hero-side{
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_hero(df: pd.DataFrame, hotspots_df: pd.DataFrame) -> None:
+    latest_ts = pd.to_datetime(df["timestamp"], errors="coerce").max()
+    latest_str = latest_ts.strftime("%Y-%m-%d %H:%M") if pd.notna(latest_ts) else "-"
+    st.markdown(
+        f"""
+<div class="hero">
+  <div>
+    <div class="hero-kicker">城市交通智能决策平台</div>
+    <h1>蓉城智行 · 城市交通 AI 中枢</h1>
+    <p>围绕城市拥堵治理与路网协同优化，整合时序预测、视觉感知、策略推演与应急选址，构建可解释、可验证、可落地的综合型应用系统。</p>
+    <span class="chip">时空样本 {len(df):,} 条</span>
+    <span class="chip">在线热点 {len(hotspots_df)} 条</span>
+    <span class="chip">多模型评估</span>
+    <span class="chip">视觉检测</span>
+    <span class="chip">策略沙盘</span>
+  </div>
+  <div class="hero-side">
+    <div class="hero-stat"><div class="k">核心走廊</div><div class="v">{len(ROUTE_GEOMETRY)}</div></div>
+    <div class="hero-stat"><div class="k">覆盖区域</div><div class="v">{df['district'].nunique()}</div></div>
+    <div class="hero-stat"><div class="k">模型组合</div><div class="v">机器学习 / 深度感知</div></div>
+    <div class="hero-stat"><div class="k">数据更新时间</div><div class="v" style="font-size:0.95rem;">{latest_str}</div></div>
+  </div>
+</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _light(fig: go.Figure) -> go.Figure:
+    fig.update_layout(
+        template="plotly_white",
+        paper_bgcolor="rgba(255,255,255,0)",
+        plot_bgcolor="#fcfdfc",
+        font=dict(color="#22322e", size=13, family="PingFang SC, Microsoft YaHei, Noto Sans SC, sans-serif"),
+        title=dict(font=dict(size=21, color="#1f2f2a")),
+        colorway=["#3f8f80", "#66b4a5", "#88c3b7", "#a8d2c8", "#c6e1db"],
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1.0,
+            font=dict(size=12, color="#30423d"),
+            bgcolor="rgba(255,255,255,0.68)",
+            bordercolor="#d2dbd7",
+            borderwidth=1,
+        ),
+    )
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="#dfe6e2",
+        zeroline=False,
+        showline=True,
+        linecolor="#c5d1cc",
+        linewidth=1.1,
+        title_font=dict(size=14, color="#334641"),
+        tickfont=dict(size=12, color="#4a5b56"),
+    )
+    fig.update_yaxes(
+        showgrid=True,
+        gridcolor="#dfe6e2",
+        zeroline=False,
+        showline=True,
+        linecolor="#c5d1cc",
+        linewidth=1.1,
+        title_font=dict(size=14, color="#334641"),
+        tickfont=dict(size=12, color="#4a5b56"),
+    )
+    fig.update_coloraxes(
+        colorbar=dict(
+            title=dict(font=dict(color="#31433e", size=13)),
+            tickfont=dict(color="#42544f", size=12),
+            outlinecolor="#cad6d1",
+            outlinewidth=1,
+            bgcolor="rgba(255,255,255,0.72)",
+        )
+    )
+    fig.update_annotations(font=dict(color="#2f3f3a", size=12))
+    return fig
+
+
 def _ensure_vision_demo_samples() -> List[Path]:
     VISION_SAMPLE_DIR.mkdir(parents=True, exist_ok=True)
     real_files = sorted([p for p in VISION_SAMPLE_DIR.glob("real_traffic_*") if p.is_file()], key=lambda x: x.name)
