@@ -31,7 +31,9 @@ from src.dataset_hub import (
 )
 from src.emergency_location import build_network_data, compute_station_metrics, optimize_emergency_centers
 from src.llm_api import LLMSettings, enhance_answer_with_llm, is_llm_configured, test_llm_connection
+from src.local_train import build_training_commands, get_local_training_status, list_local_training_runs, load_training_curve
 from src.model_lab import corridor_deep_forecast, detect_anomaly_points, feature_importance_from_rf, train_model_zoo
+from src.progress_board import build_progress_kpis, load_progress_board, save_progress_board
 from src.traffic_data import collect_online_hotspots, corridor_list, load_hotspots_data, load_or_build_traffic_data
 from src.traffic_model import explain_next_hour_drivers, forecast_corridor, train_traffic_model
 from src.traffic_qa import answer_query
@@ -1951,6 +1953,8 @@ def main() -> None:
         st.session_state["timeout_s"] = 45
     if "show_chart_notes" not in st.session_state:
         st.session_state["show_chart_notes"] = True
+    if "train_refresh_nonce" not in st.session_state:
+        st.session_state["train_refresh_nonce"] = 0
 
     st.markdown('<div class="control-bar">', unsafe_allow_html=True)
     row_left, row_right = st.columns([1.25, 1.75])
@@ -2038,14 +2042,14 @@ def main() -> None:
     rank_df = rank_hot_corridors(df, lookback_hours=24)
     corridors = corridor_list()
 
-    tabs = st.tabs(["总览驾驶舱", "模型实验室", "深度预测", "视觉感知", "策略推演", "应急站选址"])
+    tabs = st.tabs(["总览驾驶舱", "模型实验室", "深度预测", "视觉感知", "策略推演", "应急站选址", "项目进度"])
 
     with tabs[0]:
         render_hero(df, hotspots_df)
         kpis = compute_city_kpis(df)
 
         c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("近24小时平均速度（公里/小时）", f"{kpis['avg_speed']:.1f}")
+        c1.metric("近24小时平均速度", f"{kpis['avg_speed']:.1f}", help="单位：公里/小时")
         c2.metric("近24小时拥堵指数", f"{kpis['avg_index']:.1f}")
         c3.metric("严重拥堵占比", f"{kpis['severe_ratio']:.1%}")
         c4.metric("近24小时事件总数", f"{kpis['incident_total']:.0f}")
@@ -2430,7 +2434,7 @@ def main() -> None:
             unsafe_allow_html=True,
         )
         sample_paths = _ensure_vision_demo_samples()
-        vision_tabs = st.tabs(["实时检测", "模型对比", "数据集管理"])
+        vision_tabs = st.tabs(["实时检测", "模型对比", "数据集管理", "本地训练"])
 
         with vision_tabs[0]:
             c1, c2 = st.columns([1.05, 0.95])
@@ -2541,13 +2545,13 @@ def main() -> None:
                         "run_device": run_device,
                     }
 
-                    total_targets = int(result.object_table["??"].sum()) if not result.object_table.empty else 0
+                    total_targets = int(result.object_table["数量"].sum()) if not result.object_table.empty else 0
                     avg_conf = float(result.object_table["平均置信度"].mean()) if not result.object_table.empty else 0.0
                     history = st.session_state.setdefault("vision_detect_history", [])
                     history.append(
                         {
-                            "??": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "??": image_name,
+                            "时间": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "图像名称": image_name,
                             "模型版本": result.model_name,
                             "推理设备": run_device,
                             "运行状态": result.engine,
@@ -2569,7 +2573,7 @@ def main() -> None:
                 _show(result.figure, key="vision-fig-single")
                 st.dataframe(result.object_table, use_container_width=True, hide_index=True)
 
-                total_targets = int(result.object_table["??"].sum()) if not result.object_table.empty else 0
+                total_targets = int(result.object_table["数量"].sum()) if not result.object_table.empty else 0
                 avg_conf = float(result.object_table["平均置信度"].mean()) if not result.object_table.empty else 0.0
                 m1, m2, m3, m4 = st.columns(4)
                 m1.metric("模型版本", result.model_name)
@@ -2705,7 +2709,7 @@ def main() -> None:
                     def _compare_progress(done: int, total: int, detail: str) -> None:
                         pct = 2 if total <= 0 else max(2, min(99, int(done * 100 / total)))
                         cmp_bar.progress(pct, text=f"模型对比任务：{pct}%")
-                        cmp_note.caption(f"{detail}?{done}/{total}?")
+                        cmp_note.caption(f"{detail}（{done}/{total}）")
 
                     board = compare_yolo_versions(
                         compare_items,
@@ -2961,6 +2965,142 @@ def main() -> None:
                 ],
             )
 
+        with vision_tabs[3]:
+            section_header("本地训练中心", "数据检查、命令生成、训练记录与曲线回看")
+            st.markdown(
+                '<div class="note">推荐流程：先在“数据集管理”导入或扫描数据，再在本页完成训练命令复制与结果复盘。</div>',
+                unsafe_allow_html=True,
+            )
+
+            top_a, top_b = st.columns([0.24, 0.76])
+            with top_a:
+                if st.button("刷新训练状态", use_container_width=True, key="train-refresh-btn"):
+                    st.session_state["train_refresh_nonce"] += 1
+                    st.rerun()
+            with top_b:
+                st.caption(f"刷新序号：{int(st.session_state.get('train_refresh_nonce', 0))}")
+
+            train_status = get_local_training_status(DATA_DIR, BASE_DIR)
+            train_cmd = build_training_commands(train_status)
+
+            m1, m2, m3, m4, m5 = st.columns(5)
+            m1.metric("原始压缩包", f"{int(train_status.get('raw_archive_count', 0))}")
+            m2.metric("训练图片", f"{int(train_status.get('train_images', 0))}")
+            m3.metric("验证图片", f"{int(train_status.get('val_images', 0))}")
+            m4.metric("训练标签", f"{int(train_status.get('train_labels', 0))}")
+            m5.metric("验证标签", f"{int(train_status.get('val_labels', 0))}")
+
+            if bool(train_status.get("dataset_ready", False)):
+                st.success("训练数据已就绪，可以直接启动本地训练。")
+            else:
+                st.warning("训练数据未完全就绪，请先执行数据准备命令。")
+
+            summary = train_status.get("summary_data", {}) or {}
+            if isinstance(summary, dict) and summary:
+                with st.expander("查看数据准备摘要", expanded=False):
+                    st.json(summary)
+
+            st.markdown("**关键路径**")
+            st.code(str(train_status.get("dataset_root", "")), language="text")
+            st.code(str(train_status.get("data_yaml", "")), language="text")
+            weights = train_status.get("weights", []) or []
+            if weights:
+                st.caption("本地可用权重：" + "、".join([str(w) for w in weights]))
+            else:
+                st.caption("暂未发现本地权重文件，将在训练时尝试自动下载。")
+
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.markdown("**数据准备命令**")
+                st.code(str(train_cmd.get("prepare", "")), language="powershell")
+            with c2:
+                st.markdown("**GPU 训练命令**")
+                st.code(str(train_cmd.get("gpu", "")), language="powershell")
+            with c3:
+                st.markdown("**CPU 训练命令**")
+                st.code(str(train_cmd.get("cpu", "")), language="powershell")
+
+            st.caption("也可以直接运行脚本：`run_train_gpu.ps1` 或 `run_train_cpu.ps1`。")
+
+            st.markdown("**训练任务记录**")
+            runs_df = list_local_training_runs(BASE_DIR, limit=30)
+            if runs_df.empty:
+                st.info("暂无训练记录。先执行训练命令后，这里会自动展示指标与曲线。")
+            else:
+                show_runs = runs_df.copy()
+                show_runs = show_runs.rename(
+                    columns={
+                        "run_name": "训练任务",
+                        "epoch": "轮次",
+                        "mAP50": "mAP@0.5",
+                        "mAP50-95": "mAP@0.5:0.95",
+                        "precision": "精确率",
+                        "recall": "召回率",
+                        "train_loss": "训练损失",
+                        "val_loss": "验证损失",
+                        "updated_at": "更新时间",
+                    }
+                )
+                for col in ["mAP@0.5", "mAP@0.5:0.95", "精确率", "召回率", "训练损失", "验证损失"]:
+                    if col in show_runs.columns:
+                        show_runs[col] = pd.to_numeric(show_runs[col], errors="coerce").round(4)
+                st.dataframe(
+                    show_runs[
+                        ["训练任务", "轮次", "mAP@0.5", "mAP@0.5:0.95", "精确率", "召回率", "训练损失", "验证损失", "更新时间"]
+                    ],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+                run_names = runs_df["run_name"].astype(str).tolist()
+                picked_run = st.selectbox("选择训练任务查看曲线", options=run_names, key="train-picked-run")
+                picked_row = runs_df[runs_df["run_name"].astype(str) == str(picked_run)]
+                if not picked_row.empty:
+                    run_dir = Path(str(picked_row.iloc[0]["run_dir"]))
+                    curve = load_training_curve(run_dir)
+                    if not curve.empty:
+                        metric_fig = go.Figure()
+                        if "mAP50" in curve.columns:
+                            metric_fig.add_trace(
+                                go.Scatter(x=curve["epoch"], y=curve["mAP50"], mode="lines", name="mAP@0.5", line=dict(color="#3f8f80", width=2.4))
+                            )
+                        if "mAP50-95" in curve.columns:
+                            metric_fig.add_trace(
+                                go.Scatter(x=curve["epoch"], y=curve["mAP50-95"], mode="lines", name="mAP@0.5:0.95", line=dict(color="#66b4a5", width=2.2))
+                            )
+                        if "precision" in curve.columns:
+                            metric_fig.add_trace(
+                                go.Scatter(x=curve["epoch"], y=curve["precision"], mode="lines", name="精确率", line=dict(color="#a27f5d", width=1.9))
+                            )
+                        if "recall" in curve.columns:
+                            metric_fig.add_trace(
+                                go.Scatter(x=curve["epoch"], y=curve["recall"], mode="lines", name="召回率", line=dict(color="#4b637f", width=1.9))
+                            )
+                        metric_fig.update_layout(title=f"{picked_run} 训练指标曲线", xaxis_title="轮次", yaxis_title="指标值")
+                        _show(metric_fig, key="train-curve-metric")
+
+                        loss_fig = go.Figure()
+                        if "train_loss" in curve.columns:
+                            loss_fig.add_trace(
+                                go.Scatter(x=curve["epoch"], y=curve["train_loss"], mode="lines", name="训练损失", line=dict(color="#93514b", width=2.2))
+                            )
+                        if "val_loss" in curve.columns:
+                            loss_fig.add_trace(
+                                go.Scatter(x=curve["epoch"], y=curve["val_loss"], mode="lines", name="验证损失", line=dict(color="#7e948f", width=2.0))
+                            )
+                        loss_fig.update_layout(title=f"{picked_run} 损失曲线", xaxis_title="轮次", yaxis_title="损失")
+                        _show(loss_fig, key="train-curve-loss")
+
+                        chart_insight(
+                            "本地训练解读",
+                            [
+                                "当 mAP 曲线持续上升且损失曲线平稳下降时，说明当前训练配置有效。",
+                                "若验证损失长期高于训练损失，建议增加数据增强或适当降低学习率。",
+                            ],
+                        )
+                    else:
+                        st.info("该训练任务暂无可读曲线文件。")
+
     with tabs[4]:
         section_header("策略推演与智能问答", "策略参数联动、风险对比、自动建议")
         target_corridor = st.selectbox("推演走廊", corridors, index=2, key="plan-corridor")
@@ -3145,6 +3285,78 @@ def main() -> None:
         with st.expander("查看数据源链接", expanded=False):
             for idx, row in enumerate(DATASET_BACKUP, start=1):
                 st.markdown(f"{idx}. [{row['名称']} 数据源链接]({row['链接']})")
+
+    with tabs[6]:
+        section_header("项目拆解与推进看板", "将大项目拆成小项目，支持分工、排期与里程碑推进")
+        st.markdown(
+            '<div class="note">YOLO 模块已按你的要求暂时冻结；当前先推进数据、建模、策略和交付主线，后续再回到视觉专项做强化。</div>',
+            unsafe_allow_html=True,
+        )
+
+        board_df = load_progress_board(BASE_DIR)
+        kpi = build_progress_kpis(board_df)
+        k1, k2, k3, k4, k5 = st.columns(5)
+        k1.metric("模块总数", f"{int(kpi['模块数'])}")
+        k2.metric("已完成", f"{int(kpi['已完成'])}")
+        k3.metric("进行中", f"{int(kpi['进行中'])}")
+        k4.metric("风险阻塞", f"{int(kpi['风险阻塞'])}")
+        k5.metric("总体完成度", f"{float(kpi['总体完成度']):.1f}%")
+
+        board_show = board_df.copy()
+        board_show["完成度"] = pd.to_numeric(board_show["完成度"], errors="coerce").fillna(0).clip(0, 100)
+        fig_board = px.bar(
+            board_show.sort_values(["优先级", "完成度"], ascending=[True, False]),
+            x="完成度",
+            y="模块名称",
+            color="状态",
+            orientation="h",
+            title="分模块完成度看板",
+            color_discrete_map={
+                "已完成": "#3f8f80",
+                "进行中": "#66b4a5",
+                "待开始": "#b8c8c3",
+                "风险阻塞": "#93514b",
+            },
+            labels={"完成度": "完成度(%)", "模块名称": "模块"},
+        )
+        _show(fig_board, key="project-board-bar")
+
+        st.markdown("**编辑模块进度（支持直接保存）**")
+        edited = st.data_editor(
+            board_df,
+            hide_index=True,
+            use_container_width=True,
+            num_rows="fixed",
+            column_config={
+                "模块编号": st.column_config.TextColumn("模块编号", width="small", disabled=True),
+                "模块名称": st.column_config.TextColumn("模块名称", width="medium"),
+                "状态": st.column_config.SelectboxColumn("状态", options=["待开始", "进行中", "已完成", "风险阻塞"]),
+                "完成度": st.column_config.NumberColumn("完成度", min_value=0, max_value=100, step=1, format="%d"),
+                "优先级": st.column_config.NumberColumn("优先级", min_value=1, max_value=99, step=1, format="%d"),
+                "本周目标": st.column_config.TextColumn("本周目标", width="large"),
+                "下一步": st.column_config.TextColumn("下一步", width="large"),
+                "负责人": st.column_config.TextColumn("负责人", width="small"),
+            },
+            key="project-progress-editor",
+        )
+        if st.button("保存进度看板", use_container_width=False, key="project-save-btn"):
+            saved_df = save_progress_board(BASE_DIR, edited)
+            st.success(f"进度看板已保存，共 {len(saved_df)} 个模块。")
+
+        todo = board_df[board_df["状态"] != "已完成"].sort_values(["优先级", "完成度"], ascending=[True, True]).head(5)
+        if not todo.empty:
+            st.markdown("**下一轮建议优先推进（前5项）**")
+            for _, row in todo.iterrows():
+                st.markdown(
+                    f"- `[{row['模块编号']}]` {row['模块名称']}（{int(row['完成度'])}%）: {row['下一步']}"
+                )
+        chart_insight(
+            "看板解读",
+            [
+                "建议按优先级从高到低推进，每完成一个模块就更新一次完成度。",
+                "若出现“风险阻塞”，优先清理阻塞项，避免影响后续模块连锁进度。",
+            ],
+        )
 
 
 if __name__ == "__main__":
