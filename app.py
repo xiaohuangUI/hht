@@ -2359,73 +2359,240 @@ def main() -> None:
                 st.dataframe(boot_df, use_container_width=True, hide_index=True)
 
     with tabs[2]:
-        section_header("深度时序预测与异常检测", "多步预测与异常识别联动")
-        selected_corridor = st.selectbox("预测走廊", corridors, index=0, key="deep-corridor")
-        horizon = st.slider("预测时长（小时）", 12, 48, 24, 1, key="deep-horizon")
+        section_header("深度时序预测与异常检测", "趋势预测 + 场景推演 + 异常诊断")
+        h1, h2, h3 = st.columns([1.0, 1.0, 1.2])
+        with h1:
+            selected_corridor = st.selectbox("预测走廊", corridors, index=0, key="deep-corridor")
+        with h2:
+            horizon = st.slider("预测时长（小时）", 12, 48, 24, 1, key="deep-horizon")
+        with h3:
+            ci_level = st.slider("置信区间等级", 80, 99, 90, 1, key="deep-ci")
 
         deep_fc, meta = corridor_deep_forecast(df, selected_corridor, horizon=horizon, lag=8)
         history = df[df["corridor"] == selected_corridor].sort_values("timestamp").tail(120)
+        deep_tabs = st.tabs(["趋势预测", "场景推演", "异常诊断"])
 
-        fig_deep = go.Figure()
-        fig_deep.add_trace(
-            go.Scatter(
-                x=history["timestamp"],
-                y=history["congestion_index"],
-                mode="lines",
-                name="历史拥堵指数",
-                line=dict(color="#7e948f", width=2),
-            )
-        )
-        if not deep_fc.empty:
+        with deep_tabs[0]:
+            fig_deep = go.Figure()
             fig_deep.add_trace(
                 go.Scatter(
-                    x=deep_fc["timestamp"],
-                    y=deep_fc["pred_congestion_index"],
-                    mode="lines+markers",
-                    name="深度预测",
-                    line=dict(color="#4f6f68", width=3, dash="dot"),
-                    marker=dict(size=6),
+                    x=history["timestamp"],
+                    y=history["congestion_index"],
+                    mode="lines",
+                    name="历史拥堵指数",
+                    line=dict(color="#7e948f", width=2),
                 )
             )
-        fig_deep.update_layout(title=f"{selected_corridor} 时序预测曲线", yaxis_title="拥堵指数", xaxis_title="时间")
-        _show(fig_deep, key="deep-fc")
-        chart_insight(
-            "时序预测解读",
-            [
-                "深色虚线为未来预测走势，可直观看到潜在风险抬升时段。",
-                "建议在预测峰值前 1-2 小时预置信号配时和分流方案。",
-            ],
-        )
 
-        if deep_fc.empty:
-            st.warning("该走廊可用样本不足，暂时无法完成深度时序建模。")
-        else:
-            severe_hours = int((deep_fc["pred_level"].astype(str) == "拥堵").sum())
-            peak = float(deep_fc["pred_congestion_index"].max())
-            d1, d2, d3 = st.columns(3)
-            d1.metric("测试集平均绝对误差", f"{meta['mae']:.2f}")
-            d2.metric("未来拥堵小时数", f"{severe_hours}")
-            d3.metric("预测峰值", f"{peak:.1f}")
+            if not deep_fc.empty:
+                z_map = {80: 1.282, 85: 1.440, 90: 1.645, 95: 1.960, 99: 2.576}
+                z = float(z_map.get(int(ci_level), np.interp(float(ci_level), [80, 99], [1.282, 2.576])))
+                resid_std = float(meta.get("residual_std", 0.0))
+                if resid_std > 0:
+                    upper = np.clip(deep_fc["pred_congestion_index"] + z * resid_std, 0, 100)
+                    lower = np.clip(deep_fc["pred_congestion_index"] - z * resid_std, 0, 100)
+                    fig_deep.add_trace(
+                        go.Scatter(
+                            x=deep_fc["timestamp"],
+                            y=upper,
+                            mode="lines",
+                            line=dict(width=0),
+                            showlegend=False,
+                            hoverinfo="skip",
+                        )
+                    )
+                    fig_deep.add_trace(
+                        go.Scatter(
+                            x=deep_fc["timestamp"],
+                            y=lower,
+                            mode="lines",
+                            line=dict(width=0),
+                            fill="tonexty",
+                            fillcolor="rgba(102,180,165,0.20)",
+                            name=f"{ci_level}%置信区间",
+                        )
+                    )
 
-        an_df = detect_anomaly_points(df, selected_corridor)
-        if not an_df.empty:
-            show_an = an_df.tail(240).copy()
-            show_an["状态"] = np.where(show_an["is_anomaly"] == 1, "异常", "正常")
-            # Plotly 的 marker size 要求非负，做平移缩放避免运行时报错
-            min_score = float(show_an["anomaly_score"].min())
-            show_an["anomaly_size"] = ((show_an["anomaly_score"] - min_score) + 0.2) * 7.0
-            fig_an = px.scatter(
-                show_an,
-                x="timestamp",
-                y="congestion_index",
-                color="状态",
-                size="anomaly_size",
-                size_max=16,
-                color_discrete_map={"正常": 主题次色, "异常": 主题强调},
-                title="异常拥堵点识别（孤立森林）",
-                labels={"timestamp": "时间", "congestion_index": "拥堵指数", "anomaly_size": "异常强度"},
+                fig_deep.add_trace(
+                    go.Scatter(
+                        x=deep_fc["timestamp"],
+                        y=deep_fc["pred_congestion_index"],
+                        mode="lines+markers",
+                        name="深度预测",
+                        line=dict(color="#4f6f68", width=3, dash="dot"),
+                        marker=dict(size=6),
+                    )
+                )
+
+            fig_deep.update_layout(title=f"{selected_corridor} 时序预测曲线", yaxis_title="拥堵指数", xaxis_title="时间")
+            _show(fig_deep, key="deep-fc")
+
+            if deep_fc.empty:
+                st.warning("该走廊可用样本不足，暂时无法完成深度时序建模。")
+            else:
+                severe_hours = int((deep_fc["pred_congestion_index"] >= 72).sum())
+                peak = float(deep_fc["pred_congestion_index"].max())
+                d1, d2, d3, d4, d5 = st.columns(5)
+                d1.metric("平均绝对误差", f"{float(meta.get('mae', 0.0)):.2f}")
+                d2.metric("均方根误差", f"{float(meta.get('rmse', 0.0)):.2f}")
+                d3.metric("拟合优度R²", f"{float(meta.get('r2', 0.0)):.3f}")
+                d4.metric("平均绝对百分比误差", f"{float(meta.get('mape', 0.0)):.1f}%")
+                d5.metric("未来拥堵小时数", f"{severe_hours}")
+                st.caption(f"预测峰值：{peak:.1f}，测试样本量：{int(meta.get('samples', 0))}")
+
+                hour_df = deep_fc.copy()
+                hour_df["时段"] = pd.to_datetime(hour_df["timestamp"]).dt.strftime("%m-%d %H时")
+                fig_hour = px.bar(
+                    hour_df,
+                    x="时段",
+                    y="pred_congestion_index",
+                    title="未来时段拥堵风险分布",
+                    color="pred_congestion_index",
+                    color_continuous_scale=统一连续色阶,
+                    labels={"pred_congestion_index": "预测拥堵指数", "时段": "时间"},
+                )
+                _show(fig_hour, key="deep-hour-risk")
+
+            chart_insight(
+                "趋势预测解读",
+                [
+                    "置信区间越窄，说明预测稳定性越高；若区间变宽，代表该时段不确定性更大。",
+                    "优先关注预测曲线的峰值时段，建议在峰值前 1-2 小时启动分流与信号优化。",
+                ],
             )
-            _show(fig_an, key="anomaly")
+
+        with deep_tabs[1]:
+            baseline_scenario = _scenario_dict(0.0, 0.0, 0.0, 0.0)
+            stress_scenario = _scenario_dict(
+                min(1.0, event_boost + 0.30),
+                max(0.0, transit_boost * 0.75),
+                max(0.0, signal_opt * 0.65),
+                max(0.0, incident_ctl * 0.65),
+            )
+            current_scenario = _scenario_dict(event_boost, transit_boost, signal_opt, incident_ctl)
+
+            fc_base = forecast_corridor(df, model_bundle, selected_corridor, horizon_hours=horizon, scenario=baseline_scenario)
+            fc_stress = forecast_corridor(df, model_bundle, selected_corridor, horizon_hours=horizon, scenario=stress_scenario)
+            fc_plan = forecast_corridor(df, model_bundle, selected_corridor, horizon_hours=horizon, scenario=current_scenario)
+
+            scene_line = pd.concat(
+                [
+                    fc_base.assign(场景="基线场景"),
+                    fc_stress.assign(场景="高压场景"),
+                    fc_plan.assign(场景="优化场景"),
+                ],
+                ignore_index=True,
+            )
+            fig_scene = px.line(
+                scene_line,
+                x="timestamp",
+                y="risk_score",
+                color="场景",
+                title=f"{selected_corridor} 风险指数场景对比",
+                labels={"timestamp": "时间", "risk_score": "风险指数", "场景": "场景"},
+                color_discrete_map={"基线场景": "#7e948f", "高压场景": "#93514b", "优化场景": "#4f6f68"},
+            )
+            _show(fig_scene, key="deep-scene-line")
+
+            def _scene_summary(name: str, fc: pd.DataFrame) -> Dict[str, object]:
+                return {
+                    "场景": name,
+                    "平均风险指数": round(float(fc["risk_score"].mean()), 2),
+                    "峰值风险指数": round(float(fc["risk_score"].max()), 2),
+                    "平均速度(公里/小时)": round(float(fc["expected_speed"].mean()), 2),
+                    "拥堵小时数": int((fc["pred_level"].astype(int) == 2).sum()),
+                }
+
+            scene_summary_df = pd.DataFrame(
+                [
+                    _scene_summary("基线场景", fc_base),
+                    _scene_summary("高压场景", fc_stress),
+                    _scene_summary("优化场景", fc_plan),
+                ]
+            )
+            st.dataframe(scene_summary_df, use_container_width=True, hide_index=True)
+
+            fig_scene_speed = px.bar(
+                scene_summary_df,
+                x="场景",
+                y="平均速度(公里/小时)",
+                color="场景",
+                title="不同场景平均速度对比",
+                color_discrete_map={"基线场景": "#7e948f", "高压场景": "#93514b", "优化场景": "#4f6f68"},
+            )
+            _show(fig_scene_speed, key="deep-scene-speed")
+
+            chart_insight(
+                "场景推演解读",
+                [
+                    "高压场景用于模拟活动叠加或突发扰动，帮助展示系统的风险感知能力。",
+                    "优化场景相较基线若出现“风险下降+速度提升”，可直接作为答辩中的策略有效性证据。",
+                ],
+            )
+
+        with deep_tabs[2]:
+            an_df = detect_anomaly_points(df, selected_corridor)
+            if an_df.empty:
+                st.warning("该走廊样本不足，暂时无法执行异常识别。")
+            else:
+                show_an = an_df.tail(300).copy()
+                show_an["状态"] = np.where(show_an["is_anomaly"] == 1, "异常", "正常")
+                min_score = float(show_an["anomaly_score"].min())
+                show_an["anomaly_size"] = ((show_an["anomaly_score"] - min_score) + 0.2) * 7.0
+                threshold = st.slider(
+                    "异常阈值（分位数）",
+                    0.70,
+                    0.99,
+                    0.90,
+                    0.01,
+                    key="deep-anomaly-quantile",
+                )
+                score_cut = float(show_an["anomaly_score"].quantile(threshold))
+                show_an["重点异常"] = np.where(show_an["anomaly_score"] >= score_cut, "重点异常", "普通波动")
+
+                a1, a2, a3 = st.columns(3)
+                a1.metric("异常点占比", f"{float((show_an['is_anomaly'] == 1).mean()):.1%}")
+                a2.metric("重点异常点数", f"{int((show_an['anomaly_score'] >= score_cut).sum())}")
+                a3.metric("异常强度阈值", f"{score_cut:.3f}")
+
+                fig_an = px.scatter(
+                    show_an,
+                    x="timestamp",
+                    y="congestion_index",
+                    color="重点异常",
+                    size="anomaly_size",
+                    size_max=16,
+                    color_discrete_map={"重点异常": 主题强调, "普通波动": 主题次色},
+                    title="异常拥堵识别分布（孤立森林）",
+                    labels={"timestamp": "时间", "congestion_index": "拥堵指数", "anomaly_size": "异常强度"},
+                )
+                _show(fig_an, key="anomaly")
+
+                key_an = (
+                    show_an[show_an["anomaly_score"] >= score_cut][["timestamp", "congestion_index", "anomaly_score", "avg_speed", "incident_count"]]
+                    .sort_values("anomaly_score", ascending=False)
+                    .head(12)
+                    .rename(
+                        columns={
+                            "timestamp": "时间",
+                            "congestion_index": "拥堵指数",
+                            "anomaly_score": "异常强度",
+                            "avg_speed": "平均速度",
+                            "incident_count": "事件数",
+                        }
+                    )
+                )
+                if not key_an.empty:
+                    st.markdown("**重点异常时刻（前12）**")
+                    st.dataframe(key_an, use_container_width=True, hide_index=True)
+
+                chart_insight(
+                    "异常诊断解读",
+                    [
+                        "重点异常点越集中，说明该时段存在明显的突发干扰，应优先纳入治理清单。",
+                        "可将异常时刻与活动、天气、事故信息联动，形成可追溯的治理证据链。",
+                    ],
+                )
 
     with tabs[3]:
         section_header("视觉感知模块（目标检测）", "实时检测、YOLO多版本对比、数据集抓取导入与导出")

@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import GradientBoostingClassifier, IsolationForest, RandomForestClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, mean_absolute_error
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, mean_absolute_error, r2_score
 from sklearn.neural_network import MLPClassifier, MLPRegressor
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
@@ -188,6 +188,11 @@ def corridor_deep_forecast(df: pd.DataFrame, corridor: str, horizon: int = 24, l
     reg.fit(x_train, y_train)
     pred_test = reg.predict(x_test)
     mae = float(mean_absolute_error(y_test, pred_test))
+    rmse = float(np.sqrt(np.mean((y_test - pred_test) ** 2)))
+    safe_denom = np.where(np.abs(y_test) < 1e-6, 1.0, np.abs(y_test))
+    mape = float(np.mean(np.abs((y_test - pred_test) / safe_denom)) * 100.0)
+    r2 = float(r2_score(y_test, pred_test))
+    residual_std = float(np.std(y_test - pred_test))
 
     # Recursive forecast
     seq = values[-lag:].copy()
@@ -203,7 +208,14 @@ def corridor_deep_forecast(df: pd.DataFrame, corridor: str, horizon: int = 24, l
     future_ts = pd.date_range(start=last_ts + pd.Timedelta(hours=1), periods=horizon, freq="H")
     out = pd.DataFrame({"timestamp": future_ts, "pred_congestion_index": preds})
     out["pred_level"] = pd.cut(out["pred_congestion_index"], bins=[-1, 48, 72, 200], labels=["畅通", "缓行", "拥堵"])
-    return out, {"mae": mae, "samples": float(len(x_test))}
+    return out, {
+        "mae": mae,
+        "rmse": rmse,
+        "mape": mape,
+        "r2": r2,
+        "residual_std": residual_std,
+        "samples": float(len(x_test)),
+    }
 
 
 def detect_anomaly_points(df: pd.DataFrame, corridor: str) -> pd.DataFrame:
