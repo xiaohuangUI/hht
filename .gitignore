@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual env / Conda
+.venv/
+venv/
+env/
+.conda/
+
+# IDE
+.vscode/
+.idea/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Logs
+*.log
+
+# Large model files
+*.pt
+*.onnx
+*.engine
+*.tflite
+
+# Runtime output & temp data
+data/city_data/tmp/
+data/city_data/cache/
+data/city_data/dataset_cache/
+data/city_data/vision_dataset/cache/
+data/city_data/vision_dataset/raw_images/
+data/city_data/vision_dataset/exports/
+data/city_data/*.zip
+data/city_data/*.parquet
+data/city_data/weights/
+data/city_data/vision_datasets/raw/
+data/city_data/vision_datasets/training/
+data/city_data/vision_datasets/tmp/
+data/city_data/vision_datasets/exports/
+data/city_data/ultralytics_cfg/

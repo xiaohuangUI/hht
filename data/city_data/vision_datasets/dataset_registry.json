@@ -1,0 +1,67 @@
+[
+  {
+    "编号": "c02019c4979c",
+    "数据集名称": "实拍交通样本_bus",
+    "来源链接": "https://github.com/ultralytics/assets/releases/download/v0.0.0/bus.jpg",
+    "来源类型": "URL",
+    "来源标识": "",
+    "本地文件": "data\\city_data\\vision_datasets\\raw\\实拍交通样本_bus.jpg",
+    "文件大小字节": 137419,
+    "sha256": "c02019c4979c191eb739ddd944445ef408dad5679acab6fd520ef9d434bfbc63",
+    "图片文件数": 0,
+    "标注文件数": 0,
+    "导入时间": "2026-04-08 12:22:36"
+  },
+  {
+    "编号": "000f66e6561d",
+    "数据集名称": "北环路实拍",
+    "来源链接": "https://upload.wikimedia.org/wikipedia/commons/d/db/Northern_Boulevard_traffic%2C_Great_Neck%2C_New_York.jpg",
+    "来源类型": "URL",
+    "来源标识": "",
+    "本地文件": "data\\city_data\\vision_datasets\\raw\\北环路实拍.jpg",
+    "文件大小字节": 6328833,
+    "sha256": "000f66e6561d15488418b07600f6d5b3c11f975dc139369e4840550f36129c59",
+    "图片文件数": 0,
+    "标注文件数": 0,
+    "导入时间": "2026-04-08 12:30:09"
+  },
+  {
+    "编号": "61e5e3028863",
+    "数据集名称": "COCO128_交通基准",
+    "来源链接": "https://github.com/ultralytics/yolov5/releases/download/v1.0/coco128.zip",
+    "来源类型": "URL",
+    "来源标识": "",
+    "本地文件": "data\\city_data\\vision_datasets\\raw\\COCO128_交通基准.zip",
+    "文件大小字节": 6983030,
+    "sha256": "61e5e3028863d8ffc3b81d6a514603954889f0edd5e4b44c4ce60b2da99aeb8e",
+    "图片文件数": 128,
+    "标注文件数": 129,
+    "导入时间": "2026-04-08 12:59:11"
+  },
+  {
+    "编号": "abeea063037e",
+    "数据集名称": "VisDrone2019_验证集",
+    "来源链接": "https://github.com/ultralytics/assets/releases/download/v0.0.0/VisDrone2019-DET-val.zip",
+    "来源类型": "URL",
+    "来源标识": "",
+    "本地文件": "data\\city_data\\vision_datasets\\raw\\VisDrone2019_验证集.zip",
+    "文件大小字节": 81638851,
+    "sha256": "abeea063037e5d20398837deb11084e652402a34ddf4f207bdf541a6f2a35ef9",
+    "图片文件数": 548,
+    "标注文件数": 548,
+    "导入时间": "2026-04-08 13:00:03"
+  },
+  {
+    "编号": "86a77eba9313",
+    "数据集名称": "VisDrone2019_训练集",
+    "来源链接": "https://github.com/ultralytics/assets/releases/download/v0.0.0/VisDrone2019-DET-train.zip",
+    "来源类型": "URL",
+    "来源标识": "",
+    "本地文件": "data\\city_data\\vision_datasets\\raw\\VisDrone2019_训练集.zip",
+    "文件大小字节": 1549875511,
+    "sha256": "86a77eba93137bfc16e4993860de9245b0675c0dba0d3ab98fb458699e256f84",
+    "图片文件数": 6471,
+    "标注文件数": 6471,
+    "导入时间": "2026-04-08 13:32:03"
+  }
+]

@@ -1,0 +1,28 @@
+{
+  "users": {
+    "评审专家": {
+      "salt": "demo_评审专家",
+      "pwd_hash": "27dac1294a9defd255e523af7e03cadcc2884edfb8acb3abd168ca7844ca6bcb",
+      "role": "演示账号",
+      "created_at": "2026-04-07 00:00:00"
+    },
+    "管理员": {
+      "salt": "demo_管理员",
+      "pwd_hash": "570a56b5bcc44140b2c7eda1cd819cad0b3f6769cfe9ad2b4088c277aa075eec",
+      "role": "演示账号",
+      "created_at": "2026-04-07 00:00:00"
+    },
+    "演示账号": {
+      "salt": "demo_演示账号",
+      "pwd_hash": "88d6f4d65e41466286bb4643cbbb1d8a6f666883db2ba6afe703d109d3b39571",
+      "role": "演示账号",
+      "created_at": "2026-04-07 00:00:00"
+    },
+    "hht": {
+      "salt": "0c82c9dad1b36faf",
+      "pwd_hash": "74cfa3a418b15d91721cf5e02edbb078216deed5d2babc2cecbd30bf22dec6c1",
+      "role": "注册用户",
+      "created_at": "2026-04-07 22:40:47"
+    }
+  }
+}
